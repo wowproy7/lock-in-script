@@ -1,0 +1,105 @@
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local itemName = "ToolName" -- Replace with your item's name
+local lockOnActive = false
+local userInputService = game:GetService("UserInputService")
+
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    for _, otherPlayer in pairs(game.Players:GetPlayers()) do
+        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local distance = (character.HumanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).magnitude
+            if distance < shortestDistance then
+                shortestDistance = distance
+                closestPlayer = otherPlayer
+            end
+        end
+    end
+    return closestPlayer
+end
+
+local function lockOntoTarget()
+    if lockOnActive then
+        local target = getClosestPlayer()
+        if target and target.Character then
+            character.HumanoidRootPart.CFrame = CFrame.lookAt(character.HumanoidRootPart.Position, target.Character.HumanoidRootPart.Position)
+        end
+    end
+end
+
+-- Detect if the item is actively held
+local function checkItemHeld()
+    local tool = character:FindFirstChild(itemName) or player.Backpack:FindFirstChild(itemName)
+    return tool and tool.Parent == character
+end
+
+-- Create GUI button (for mobile users)
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player.PlayerGui
+
+local lockButton = Instance.new("TextButton")
+lockButton.Parent = screenGui
+lockButton.Size = UDim2.new(0, 200, 0, 50)
+lockButton.Position = UDim2.new(0.5, -100, 0.8, 0)
+lockButton.Text = "Lock-On: OFF"
+lockButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+
+lockButton.MouseButton1Click:Connect(function()
+    lockOnActive = not lockOnActive
+    if lockOnActive and checkItemHeld() then
+        lockButton.Text = "Lock-On: ON"
+        lockButton.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
+        lockOntoTarget()
+    else
+        lockOnActive = false
+        lockButton.Text = "Lock-On: OFF"
+        lockButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    end
+end)
+
+-- Enable lock-on when holding item + right-clicking (PC)
+userInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        if checkItemHeld() then
+            lockOnActive = true
+            lockButton.Text = "Lock-On: ON"
+            lockButton.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
+            lockOntoTarget()
+        end
+    end
+end)
+
+userInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        lockOnActive = false
+        lockButton.Text = "Lock-On: OFF"
+        lockButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    end
+end)
+
+-- Make button draggable (for mobile users)
+local dragging = false
+local dragStart, startPos
+
+lockButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = lockButton.Position
+    end
+end)
+
+lockButton.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        lockButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                                        startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+lockButton.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
