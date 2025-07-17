@@ -1,0 +1,108 @@
+-- ⚠️ CHAOS Script
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
+local TeleportService = game:GetService("TeleportService")
+local LocalPlayer = Players.LocalPlayer
+local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local root = char:WaitForChild("HumanoidRootPart")
+local placeId = game.PlaceId
+
+-- 🖼️ GUI Setup
+local screenGui = Instance.new("ScreenGui", game.CoreGui)
+screenGui.Name = "ChaosGui"
+
+local label = Instance.new("TextLabel", screenGui)
+label.Size = UDim2.new(0, 300, 0, 50)
+label.Position = UDim2.new(0.5, -150, 0.1, 0)
+label.BackgroundTransparency = 0.5
+label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+label.TextColor3 = Color3.fromRGB(255, 0, 0)
+label.Font = Enum.Font.SourceSansBold
+label.TextSize = 24
+label.Text = ""
+
+-- 💬 Chat Message Function
+local function sendChatMessage(text, color)
+    StarterGui:SetCore("ChatMakeSystemMessage", {
+        Text = text,
+        Color = color or Color3.fromRGB(255, 0, 0),
+        Font = Enum.Font.SourceSansBold,
+        TextSize = 18
+    })
+end
+
+-- 🔁 Teleport to Players
+local function teleportToPlayers()
+    local success = false
+    for _, target in pairs(Players:GetPlayers()) do
+        if target ~= LocalPlayer and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            root.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+            success = true
+            task.wait(0.5)
+        end
+    end
+    return success
+end
+
+-- ⚔️ Equip First Weapon + Huge Hitbox
+local function equipAndKill()
+    local sword
+    for _, item in pairs(LocalPlayer.Backpack:GetChildren()) do
+        if item:IsA("Tool") then
+            sword = item
+            break
+        end
+    end
+
+    if sword then
+        sword.Parent = char
+
+        local hitbox = Instance.new("Part")
+        hitbox.Size = Vector3.new(100, 20, 100)
+        hitbox.Transparency = 1
+        hitbox.CanCollide = false
+        hitbox.Anchored = false
+        hitbox.Name = "MegaHitbox"
+
+        local handle = sword:FindFirstChild("Handle") or sword:FindFirstChildWhichIsA("BasePart")
+        if handle then
+            local weld = Instance.new("WeldConstraint")
+            weld.Part0 = handle
+            weld.Part1 = hitbox
+            weld.Parent = hitbox
+            hitbox.Parent = sword
+
+            hitbox.Touched:Connect(function(hit)
+                local victim = hit:FindFirstAncestorOfClass("Model")
+                local hum = victim and victim:FindFirstChildOfClass("Humanoid")
+                if hum and victim ~= char then
+                    hum:TakeDamage(9999)
+                    print("☠️ Eliminated", victim.Name)
+                end
+            end)
+        end
+    else
+        warn("⚠️ No weapon found in inventory.")
+    end
+end
+
+-- 🚀 Fly + Announce
+local function flyAndAnnounce()
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 100, 0)
+    bodyVelocity.MaxForce = Vector3.new(0, 1e5, 0)
+    bodyVelocity.Parent = root
+    game.Debris:AddItem(bodyVelocity, 2)
+
+    label.Text = "🚨 Server hacked by Noah 🚨"
+    label.TextColor3 = Color3.fromRGB(0, 255, 0)
+    sendChatMessage("🚨 Server hacked by Noah 🚨", Color3.fromRGB(0, 255, 0))
+
+    task.delay(3, function()
+        label.Text = ""
+    end)
+end
+
+-- 🔁 Rejoin Failsafe
+local function
